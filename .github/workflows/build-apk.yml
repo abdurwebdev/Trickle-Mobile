@@ -33,8 +33,17 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
-      - name: Upload APK Artifact
+      - name: Sign APK
+        uses: r2studio/apksigner-action@v1
+        with:
+          apkPath: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          keystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias: ${{ secrets.KEYSTORE_ALIAS }}
+          keyPassword: ${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
+
+      - name: Upload Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: android/app/build/outputs/apk/release/*.apk
+          name: app-release-signed
+          path: android/app/build/outputs/apk/release/app-release-unsigned-signed.apk
