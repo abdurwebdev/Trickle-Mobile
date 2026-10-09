@@ -34,16 +34,26 @@ jobs:
           ./gradlew assembleRelease
 
       - name: Sign APK
-        uses: r2studio/apksigner-action@v1
-        with:
-          apkPath: android/app/build/outputs/apk/release/app-release-unsigned.apk
-          keystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          keystorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          keyAlias: ${{ secrets.KEYSTORE_ALIAS }}
-          keyPassword: ${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > release.p12
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -n 1)
+          
+          $BUILD_TOOLS_DIR/zipalign -v -p 4 android/app/build/outputs/apk/release/app-release-unsigned.apk android/app/build/outputs/apk/release/app-release-aligned.apk
+          
+          $BUILD_TOOLS_DIR/apksigner sign --ks release.p12 \
+            --ks-pass pass:"$KEYSTORE_PASSWORD" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --key-pass pass:"$KEY_PASSWORD" \
+            --out android/app/build/outputs/apk/release/app-release-signed.apk \
+            android/app/build/outputs/apk/release/app-release-aligned.apk
 
       - name: Upload Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-signed
-          path: android/app/build/outputs/apk/release/app-release-unsigned-signed.apk
+          path: android/app/build/outputs/apk/release/app-release-signed.apk
